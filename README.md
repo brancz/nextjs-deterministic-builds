@@ -2,7 +2,7 @@
 
 This repo intends to demonstrate how to build NextJS apps deterministically. The important part of making the build deterministic is the content of [`next.config.js`](./next.config.js). An important caveat is that if the NextJS preview mode is used, this makes it insecure, do not do this if you use preview mode!
 
-This repo is based on the [`with-docker`](https://github.com/vercel/next.js/tree/canary/examples/with-docker) example.
+This repo is based on the [`with-docker`](https://github.com/vercel/next.js/tree/canary/examples/with-docker) example. And extends it by making the container image being built also deterministic.
 
 ## Verify
 
