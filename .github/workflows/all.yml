@@ -1,0 +1,53 @@
+name: All
+
+on:
+  push:
+    branches: [ ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+
+  node-build:
+
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [14.x]
+
+    steps:
+    - uses: actions/checkout@v2
+    - run: find . -exec touch -t 202101010000.00 {} +
+    - run: ls -la
+    - uses: actions/cache@v2
+      with:
+        path: |
+          /tmp/buildah
+        key: ${{ runner.os }}-buildah-run-${{ github.sha }}
+        restore-keys: |
+          ${{ runner.os }}-buildah-run-
+    - run: |
+        mkdir -vp ~/.config/containers
+        cat << EOF > ~/.config/containers/storage.conf
+          [storage]
+          driver="overlay"
+          # Temporary storage location
+          runroot = "/tmp/buildah/run/containers/storage"
+
+          # Primary Read/Write location of container storage
+          graphroot = "/tmp/buildah/var/lib/containers/storage"
+
+          # Storage path for rootless users
+          rootless_storage_path = "/tmp/buildah/local/share/containers/storage"
+          [storage.options]
+          mount_program="/usr/bin/fuse-overlayfs"
+        EOF
+    - run: |
+        buildah --version
+        buildah info
+    - run: |
+        buildah bud --timestamp 0 --layers -t quay.io/brancz/nextjs-deterministic-builds:latest
+    - run: |
+        buildah images --format="{{.Name}}:{{.Tag}} {{.Digest}}" | grep quay.io/brancz/nextjs-deterministic-builds:latest | awk '{print $NF}' | tr -d '\n' > image-sha
+        git diff --exit-code

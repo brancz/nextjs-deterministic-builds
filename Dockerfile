@@ -5,14 +5,16 @@ FROM docker.io/library/node@sha256:0944bcebe7fb69f2e81080b879d68e93446d5118fb857
 #RUN apk add --no-cache libc6-compat
 WORKDIR /app
 COPY package.json yarn.lock ./
-RUN yarn install --frozen-lockfile
+RUN yarn install --frozen-lockfile && find /app/node_modules -exec touch -t 202101010000.00 {} +
 
 # Rebuild the source code only when needed
 FROM docker.io/library/node@sha256:0944bcebe7fb69f2e81080b879d68e93446d5118fb857f029c3516df25d374d9 AS builder
+ENV NODE_ENV production
+ENV CIRCLE_NODE_TOTAL 1
 WORKDIR /app
 COPY . .
-COPY --from=deps /app/node_modules ./node_modules
-RUN yarn build && rm -rf ./.next/cache/webpack
+COPY --from=deps /app/node_modules /app/node_modules
+RUN yarn build && rm -rf /app/.next/cache/webpack && chown -R nobody:nogroup /app/.next && find /app/.next -exec touch -t 202101010000.00 {} +
 
 # Production image, copy all the files and run next
 FROM docker.io/library/node@sha256:0944bcebe7fb69f2e81080b879d68e93446d5118fb857f029c3516df25d374d9 AS runner
@@ -27,10 +29,7 @@ COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
 
-RUN addgroup -g 1001 -S nodejs
-RUN adduser -S nextjs -u 1001
-RUN chown -R nextjs:nodejs /app/.next
-USER nextjs
+USER nobody
 
 EXPOSE 3000
 

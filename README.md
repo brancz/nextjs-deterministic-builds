@@ -12,24 +12,25 @@ The intention is that two consecutive `next build` runs produce identical output
 rm -rf next1 next2 && NODE_ENV=production yarn build && mv .next next1 && rm -rf next1/cache/webpack && NODE_ENV=production yarn build && mv .next next2 && rm -rf next2/cache/webpack && git diff --no-index next1 next2 --exit-code && echo 'Deterministic!'
 ```
 
-To build a byte-by-byte identical container image, use `podman` and force creation timestamps to be `0`:
+To build a byte-by-byte identical container image, use `buildah` and force creation timestamps to be `0`:
 
 ```
-podman build --no-cache --timestamp 0 .
+buildah bud --no-cache --timestamp 0 -t quay.io/brancz/nextjs-deterministic-builds:latest
 ```
 
 Multiple runs of that yields identical image hashes. Since this is reproducible, it should be:
 
 ```
-d7a74488f7ac04e35a9d75d04abe1a0ab0d49595f2f0e2e1d003d9f0f4dbd2f5
+$ buildah images --format="{{.Name}}:{{.Tag}} {{.Digest}}" | grep quay.io/brancz/nextjs-deterministic-builds:latest
+quay.io/brancz/nextjs-deterministic-builds:latest sha256:9039b83ab1920131c266ad48e6174e76fa7d6e42963567d4f5af839f21fd2f7a
 ```
 
 And run it, to see that it actually works:
 
 ```
-podman run --rm -it -ePORT=3000 -p3000:3000 d7a74488f7ac04e35a9d75d04abe1a0ab0d49595f2f0e2e1d003d9f0f4dbd2f5
+podman run --rm -it -ePORT=3000 -p3000:3000 quay.io/brancz/nextjs-deterministic-builds@sha256:9039b83ab1920131c266ad48e6174e76fa7d6e42963567d4f5af839f21fd2f7a
 ```
 
-## Why `podman`
+## Why `buildah`
 
-When investigating this, I realized that there are multiple things I had assumed to be true about tools to build containers are incorrect. Using `docker build` not even things like setting the `WORKDIR` results in a reproducible image (I could not figure out why, but I assume it has something to do with metadata added to layers). Docker's buildkit is slightly better, meta things like `WORKDIR` are deterministic, however, `COPY` is not either. I could only find `podman` to have the `--timestamp` flag to configure timestamps set for these.
+When investigating this, I realized that there are multiple things I had assumed to be true about tools to build containers are incorrect. Using `docker build` not even things like setting the `WORKDIR` results in a reproducible image (I could not figure out why, but I assume it has something to do with metadata added to layers). Docker's buildkit is slightly better, meta things like `WORKDIR` are deterministic, however, `COPY` is not either. I could only find `buildah` to have the `--timestamp` flag to configure timestamps set for these.
