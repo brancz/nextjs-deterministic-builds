@@ -15,20 +15,20 @@ rm -rf next1 next2 && NODE_ENV=production yarn build && mv .next next1 && rm -rf
 To build a byte-by-byte identical container image, use `buildah` and force creation timestamps to be `0`:
 
 ```
-buildah bud --no-cache --timestamp 0 -t quay.io/brancz/nextjs-deterministic-builds:latest
+buildah bud --layers --timestamp 0 -t quay.io/brancz/nextjs-deterministic-builds:latest
 ```
 
 Multiple runs of that yields identical image hashes. Since this is reproducible, it should be:
 
 ```
 $ buildah images --format="{{.Name}}:{{.Tag}} {{.Digest}}" | grep quay.io/brancz/nextjs-deterministic-builds:latest
-quay.io/brancz/nextjs-deterministic-builds:latest sha256:9039b83ab1920131c266ad48e6174e76fa7d6e42963567d4f5af839f21fd2f7a
+quay.io/brancz/nextjs-deterministic-builds:latest sha256:6bba9eeeac42c605b1d62282a31d99a69a6902c66d9c8df4ea7ca4556c387888
 ```
 
 And run it, to see that it actually works:
 
 ```
-podman run --rm -it -ePORT=3000 -p3000:3000 quay.io/brancz/nextjs-deterministic-builds@sha256:9039b83ab1920131c266ad48e6174e76fa7d6e42963567d4f5af839f21fd2f7a
+podman run --rm -it -ePORT=3000 -p3000:3000 quay.io/brancz/nextjs-deterministic-builds@sha256:6bba9eeeac42c605b1d62282a31d99a69a6902c66d9c8df4ea7ca4556c387888
 ```
 
 ## Why `buildah`
