@@ -14,18 +14,19 @@ ENV CIRCLE_NODE_TOTAL 1
 WORKDIR /app
 COPY . .
 COPY --from=deps /app/node_modules /app/node_modules
-RUN yarn build && rm -rf /app/.next/cache/webpack && chown -R nobody:nogroup /app/.next && find /app/.next -exec touch -t 202101010000.00 {} +
+RUN yarn build && rm -rf /app/.next/cache/webpack && find /app/.next -exec touch -t 202101010000.00 {} +
 
 # Production image, copy all the files and run next
 FROM docker.io/library/node@sha256:0944bcebe7fb69f2e81080b879d68e93446d5118fb857f029c3516df25d374d9 AS runner
 WORKDIR /app
 
+ENV ENV NEXT_TELEMETRY_DISABLED 1
 ENV NODE_ENV production
 
 # You only need to copy next.config.js if you are NOT using the default configuration
 COPY --from=builder /app/next.config.js ./
 COPY --from=builder /app/public ./public
-COPY --from=builder /app/.next ./.next
+COPY --from=builder --chown=nobody:nogroup /app/.next ./.next
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
 
